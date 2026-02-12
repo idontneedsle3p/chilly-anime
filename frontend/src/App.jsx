@@ -12,7 +12,10 @@ export default function App() {
     setLoading(true);
     setPlayerUrl("");
     try {
-      const res = await fetch(`http://localhost:4000/search?q=${encodeURIComponent(query)}`);
+      // Используем переменную из .env
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:4000";
+      const res = await fetch(`${apiUrl}/search?q=${encodeURIComponent(query)}`);
+
       const data = await res.json();
       setAnimeList(data);
     } catch (e) {

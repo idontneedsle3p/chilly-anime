@@ -2,7 +2,9 @@ import express from "express";
 import cors from "cors";
 import { SmotretAnimeAPI } from "anime365wrapper";
 import fetch from "node-fetch";
+import 'dotenv/config';
 
+const PORT = process.env.PORT || 4000;
 const app = express();
 app.use(cors());
 const api = new SmotretAnimeAPI();
@@ -46,4 +48,4 @@ app.get("/search", async (req, res) => {
     }
 });
 
-app.listen(4000, () => console.log("🚀 Бэкенд запущен на порту 4000"));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
