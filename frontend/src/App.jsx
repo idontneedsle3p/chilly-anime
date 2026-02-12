@@ -134,9 +134,9 @@ export default function App() {
 
       <footer style={styles.footer}>
         <div style={styles.footerContent}>
-          <span style={styles.footerItem}>ALPHA VERSION 1.0.0</span>
+          <span style={styles.footerItem}>ALPHA VERSION 0.0.1</span>
           <span style={styles.footerDivider}></span>
-          <a href="#" style={styles.footerItem}>✈ TELEGRAM</a>
+          <a href="https://t.me/chilly_anime" target="_blank" rel="noreferrer" style={styles.footerItem}>✈ TELEGRAM</a>
         </div>
       </footer>
 
