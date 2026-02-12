@@ -29,35 +29,18 @@ app.get("/search", async (req, res) => {
         if (!q) return res.json([]);
         const list = await api.getSeriesList({ query: q, limit: 15 });
 
-        app.get("/search", async (req, res) => {
-            try {
-                const q = req.query.q;
-                if (!q) return res.json([]);
+        const results = list.map(item => {
+            let poster = item.posterUrl || "";
+            if (poster.startsWith("/")) poster = "https://anime365.ru" + poster;
 
-                const list = await api.getSeriesList({ query: q, limit: 15 });
-
-                // Важно: создаем переменную results прямо здесь
-                const results = list.map(item => {
-                    let poster = item.posterUrl || "";
-                    if (poster.startsWith("/")) poster = "https://anime365.ru" + poster;
-
-                    return {
-                        id: item.id,
-                        title: item.title.split('/')[0].trim(),
-                        originalTitle: item.title.split('/')[1] ? item.title.split('/')[1].trim() : "",
-                        shikimoriId: item.shikimoriId || 0,
-                        year: item.year,
-                        poster: `/proxy-image?url=${encodeURIComponent(poster)}`
-                    };
-                });
-
-                // Отправляем ответ внутри блока try
-                return res.json(results);
-
-            } catch (e) {
-                console.error(e); // Добавь это, чтобы видеть реальную ошибку в логах Render
-                return res.status(500).json({ error: e.message });
-            }
+            return {
+                id: item.id,
+                title: item.title.split('/')[0].trim(),
+                originalTitle: item.title.split('/')[1] ? item.title.split('/')[1].trim() : "",
+                shikimoriId: item.shikimoriId || 0,
+                year: item.year,
+                poster: `/proxy-image?url=${encodeURIComponent(poster)}`
+            };
         });
         return res.json(results);
     } catch (e) {
