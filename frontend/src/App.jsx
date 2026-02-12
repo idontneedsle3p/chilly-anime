@@ -7,15 +7,16 @@ export default function App() {
   const [activeItem, setActiveItem] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Определяем базовый URL бэкенда один раз для всего компонента
+  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
   const search = async () => {
     if (!query) return;
     setLoading(true);
     setPlayerUrl("");
     try {
-      // Используем переменную из .env
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:4000";
+      // Используем переменную apiUrl
       const res = await fetch(`${apiUrl}/search?q=${encodeURIComponent(query)}`);
-
       const data = await res.json();
       setAnimeList(data);
     } catch (e) {
@@ -82,7 +83,12 @@ export default function App() {
             {animeList.map((item) => (
               <div key={item.id} style={styles.card} onClick={() => selectAnime(item)}>
                 <div style={styles.posterBox}>
-                  <img src={item.poster} alt={item.title} style={styles.posterImg} />
+                  {/* ИСПРАВЛЕНО: Склеиваем URL бэкенда и путь к картинке */}
+                  <img
+                    src={item.poster.startsWith('http') ? item.poster : `${apiUrl}${item.poster}`}
+                    alt={item.title}
+                    style={styles.posterImg}
+                  />
                   <div style={styles.cardOverlay}>
                     <div style={styles.playIcon}>▶</div>
                   </div>
@@ -110,7 +116,6 @@ const styles = {
     position: "relative",
     overflowX: "hidden"
   },
-  // Элементы декора
   blob1: { position: "fixed", top: "-10%", left: "-5%", width: "400px", height: "400px", background: "rgba(255, 71, 87, 0.15)", filter: "blur(100px)", borderRadius: "50%", zIndex: 0 },
   blob2: { position: "fixed", bottom: "10%", right: "-5%", width: "300px", height: "300px", background: "rgba(64, 115, 255, 0.1)", filter: "blur(100px)", borderRadius: "50%", zIndex: 0 },
 
@@ -130,8 +135,7 @@ const styles = {
   card: {
     backgroundColor: "rgba(255,255,255,0.03)", borderRadius: "16px", overflow: "hidden",
     cursor: "pointer", transition: "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-    border: "1px solid rgba(255,255,255,0.05)",
-    ":hover": { transform: "translateY(-10px)" } // Это сработает через реальный CSS, здесь для инфы
+    border: "1px solid rgba(255,255,255,0.05)"
   },
   posterBox: { position: "relative", aspectRatio: "2/3", overflow: "hidden" },
   posterImg: { width: "100%", height: "100%", objectFit: "cover", transition: "0.5s" },

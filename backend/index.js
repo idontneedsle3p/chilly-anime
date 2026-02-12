@@ -29,18 +29,29 @@ app.get("/search", async (req, res) => {
         if (!q) return res.json([]);
         const list = await api.getSeriesList({ query: q, limit: 15 });
 
-        const results = list.map(item => {
-            let poster = item.posterUrl || "";
-            if (poster.startsWith("/")) poster = "https://anime365.ru" + poster;
+        app.get("/search", async (req, res) => {
+            try {
+                const q = req.query.q;
+                if (!q) return res.json([]);
+                const list = await api.getSeriesList({ query: q, limit: 15 });
 
-            return {
-                id: item.id,
-                title: item.title.split('/')[0].trim(),
-                originalTitle: item.title.split('/')[1] ? item.title.split('/')[1].trim() : "",
-                shikimoriId: item.shikimoriId || 0,
-                year: item.year,
-                poster: `http://localhost:4000/proxy-image?url=${encodeURIComponent(poster)}`
-            };
+                const results = list.map(item => {
+                    let poster = item.posterUrl || "";
+                    if (poster.startsWith("/")) poster = "https://anime365.ru" + poster;
+
+                    return {
+                        id: item.id,
+                        title: item.title.split('/')[0].trim(),
+                        originalTitle: item.title.split('/')[1] ? item.title.split('/')[1].trim() : "",
+                        shikimoriId: item.shikimoriId || 0,
+                        year: item.year,
+                        poster: `/proxy-image?url=${encodeURIComponent(poster)}`
+                    };
+                });
+                return res.json(results);
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
         });
         return res.json(results);
     } catch (e) {
