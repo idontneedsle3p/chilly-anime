@@ -1,0 +1,101 @@
+* {
+    box-sizing: border-box;
+    font-family: Inter, sans-serif;
+}
+
+body {
+    margin: 0;
+    background: #0f172a;
+    color: #e5e7eb;
+}
+
+.app {
+    max-width: 1200px;
+    margin: auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.search {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+input {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    width: 260px;
+}
+
+button {
+    background: #6366f1;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #4f46e5;
+}
+
+.content {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+}
+
+.list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.card {
+    background: #020617;
+    padding: 15px;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.card-title {
+    font-weight: bold;
+}
+
+.card-year {
+    opacity: 0.6;
+    margin-bottom: 10px;
+}
+
+.episodes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Проверьте этот блок в style.css */
+.player iframe {
+    width: 100%;
+    height: 520px;
+    border-radius: 12px;
+    border: none;
+    margin-top: 20px;
+    background: #000;
+    /* Добавьте фон, чтобы видеть блок до загрузки видео */
+}
+
+.player-container iframe {
+    width: 100%;
+    height: 500px;
+    border: none;
+    background: #000;
+    border-radius: 12px;
+}
