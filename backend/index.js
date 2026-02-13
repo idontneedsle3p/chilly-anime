@@ -4,11 +4,14 @@ import { SmotretAnimeAPI } from "anime365wrapper";
 import fetch from "node-fetch";
 import 'dotenv/config';
 
-const PORT = process.env.PORT || 4000;
 const app = express();
-app.use(cors());
+const PORT = process.env.PORT || 4000;
+app.use(cors({
+    origin: ['https://gochilly.fun', 'https://www.gochilly.fun', 'https://ваш-проект.vercel.app'],
+    methods: ['GET', 'POST'],
+    credentials: true
+}));
 const api = new SmotretAnimeAPI();
-
 // Прокси для картинок (чтобы обходить защиту Anime365)
 app.get("/proxy-image", async (req, res) => {
     try {
