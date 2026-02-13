@@ -5,12 +5,11 @@ import fetch from "node-fetch";
 import 'dotenv/config';
 
 const app = express();
-const PORT = process.env.PORT || 4000;
-app.use(cors({
-    origin: ['https://gochilly.fun', 'https://www.gochilly.fun', 'https://ваш-проект.vercel.app'],
-    methods: ['GET', 'POST'],
-    credentials: true
-}));
+app.use(cors({ origin: 'https://gochilly.fun' }));
+const options = {
+    key: fs.readFileSync('/etc/letsencrypt/live/api.gochilly.fun/privkey.pem'),
+    cert: fs.readFileSync('/etc/letsencrypt/live/api.gochilly.fun/fullchain.pem')
+};
 const api = new SmotretAnimeAPI();
 // Прокси для картинок (чтобы обходить защиту Anime365)
 app.get("/proxy-image", async (req, res) => {
@@ -51,4 +50,6 @@ app.get("/search", async (req, res) => {
     }
 });
 
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+https.createServer(options, app).listen(443, () => {
+    console.log('HTTPS Server running on port 443');
+});
