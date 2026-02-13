@@ -129,9 +129,14 @@ async function fetchWithPlayer(data, VIBIX_TOKEN) {
 
 app.get("/popular", async (req, res) => {
     try {
-        const response = await fetch("https://shikimori.one/api/animes?limit=20&order=ranked&status=ongoing&kind=tv");
-        const data = await response.json();
+        // Добавили &censored=true в конец ссылки
+        const response = await fetch("https://shikimori.one/api/animes?limit=20&order=ranked&status=ongoing&kind=tv&censored=true");
+        let data = await response.json();
+
         if (!Array.isArray(data)) return res.json([]);
+
+        // ЖЕСТКИЙ ФИЛЬТР: вырезаем всё, где рейтинг 'rx' (хентай)
+        data = data.filter(item => item.rating !== 'rx');
 
         const results = await fetchWithPlayer(data, process.env.VITE_VIBIX_TOKEN || process.env.VIBIX_TOKEN);
         res.json(results);
@@ -142,13 +147,24 @@ app.get("/search", async (req, res) => {
     try {
         const { q, genre, kind } = req.query;
 
-        const shikiParams = new URLSearchParams({ limit: 15, order: "popularity", search: q || "" });
+        // Добавили censored: "true" в параметры поиска
+        const shikiParams = new URLSearchParams({
+            limit: 15,
+            order: "popularity",
+            search: q || "",
+            censored: "true" // Скрываем 18+
+        });
+
         if (genre) shikiParams.append("genre", genre);
         if (kind) shikiParams.append("kind", kind);
 
         const response = await fetch(`https://shikimori.one/api/animes?${shikiParams.toString()}`);
-        const data = await response.json();
+        let data = await response.json();
+
         if (!Array.isArray(data)) return res.json([]);
+
+        // ЖЕСТКИЙ ФИЛЬТР: вырезаем всё, где рейтинг 'rx' (хентай)
+        data = data.filter(item => item.rating !== 'rx');
 
         const results = await fetchWithPlayer(data, process.env.VITE_VIBIX_TOKEN || process.env.VIBIX_TOKEN);
         res.json(results);
