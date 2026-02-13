@@ -8,10 +8,9 @@ import fetch from "node-fetch";
 import 'dotenv/config';
 
 const app = express();
-
-// Проверка среды
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 4000;
+const api = new SmotretAnimeAPI();
 
 app.use(cors({
     origin: [
@@ -23,8 +22,6 @@ app.use(cors({
     methods: ['GET', 'POST'],
     credentials: true
 }));
-
-const api = new SmotretAnimeAPI();
 
 // Прокси для картинок (чтобы обходить защиту Anime365)
 app.get("/proxy-image", async (req, res) => {
@@ -40,28 +37,91 @@ app.get("/proxy-image", async (req, res) => {
     }
 });
 
-app.get("/search", async (req, res) => {
+app.get("/popular", async (req, res) => {
     try {
-        const q = req.query.q;
-        if (!q) return res.json([]);
-        const list = await api.getSeriesList({ query: q, limit: 15 });
+        // Мы ищем аниме со статусом 'ongoing' (выходит сейчас) 
+        // или те, что недавно завершились, сортируя по рейтингу и популярности
+        const response = await fetch("https://shikimori.one/api/animes?limit=15&order=ranked&status=ongoing&kind=tv");
+        let data = await response.json();
 
-        const results = list.map(item => {
-            let poster = item.posterUrl || "";
-            if (poster.startsWith("/")) poster = "https://anime365.ru" + poster;
+        // Если новинок-онгоингов мало, добавим просто популярные за этот год
+        if (data.length < 5) {
+            const extra = await fetch("https://shikimori.one/api/animes?limit=10&order=popularity&season=2023_2024&kind=tv");
+            const extraData = await extra.json();
+            data = [...data, ...extraData];
+        }
+
+        const results = data.map(item => {
+            let poster = item.image.original || "";
+            if (poster.startsWith("/")) poster = "https://shikimori.one" + poster;
 
             return {
-                id: item.id,
-                title: item.title.split('/')[0].trim(),
-                originalTitle: item.title.split('/')[1] ? item.title.split('/')[1].trim() : "",
-                shikimoriId: item.shikimoriId || 0,
-                year: item.year,
-                poster: `/proxy-image?url=${encodeURIComponent(poster)}`
+                id: `shiki-${item.id}`,
+                shikimoriId: item.id,
+                title: item.russian || item.name,
+                originalTitle: item.name,
+                year: item.aired_on ? item.aired_on.split('-')[0] : "—",
+                poster: `/proxy-image?url=${encodeURIComponent(poster)}`,
+                rating: item.score || "—",
+                status: item.status === "released" ? "Завершен" : "Выходит",
+                genres: []
             };
         });
-        return res.json(results);
+
+        // Убираем дубликаты, если они появились при склейке
+        const uniqueResults = results.filter((v, i, a) => a.findIndex(t => t.shikimoriId === v.shikimoriId) === i);
+
+        res.json(uniqueResults);
     } catch (e) {
-        return res.status(500).json({ error: e.message });
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get("/search", async (req, res) => {
+    try {
+        const { q, genre, kind, year } = req.query;
+        let finalResults = [];
+
+        // Добавляем заголовки, чтобы API нас не забанил
+        const headers = { "User-Agent": "ChillyAnimeApp/1.0" };
+
+        if (genre || kind || year || q) {
+            const shikiParams = new URLSearchParams({
+                limit: 50,
+                order: "popularity", // Лучше искать по популярности при поиске
+                search: q || ""
+            });
+            if (genre) shikiParams.append("genre", genre);
+            if (kind) shikiParams.append("kind", kind);
+            if (year) shikiParams.append("season", year);
+
+            const response = await fetch(`https://shikimori.one/api/animes?${shikiParams.toString()}`, { headers });
+            const data = await response.json();
+
+            if (Array.isArray(data)) {
+                finalResults = data.map(item => ({
+                    id: `shiki-${item.id}`,
+                    shikimoriId: item.id,
+                    title: item.russian || item.name,
+                    originalTitle: item.name,
+                    // Проверка на наличие даты, чтобы не было NaN
+                    year: item.aired_on ? parseInt(item.aired_on.split('-')[0]) : 0,
+                    poster: `/proxy-image?url=${encodeURIComponent("https://shikimori.one" + item.image.original)}`,
+                    rating: item.score || "—",
+                    status: item.status === "released" ? "Завершен" : "Выходит"
+                }));
+            }
+        }
+
+        // Если результаты есть, сортируем их по году (свежие выше)
+        if (finalResults.length > 0) {
+            finalResults.sort((a, b) => b.year - a.year);
+        }
+
+        res.json(finalResults);
+    } catch (e) {
+        console.error("Search Error:", e);
+        res.status(500).json({ error: "Ошибка при поиске" });
     }
 });
 
