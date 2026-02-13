@@ -1,25 +1,31 @@
 import express from "express";
 import fs from "fs";
 import https from 'https';
+import http from 'http'; // Для локального запуска
 import cors from "cors";
 import { SmotretAnimeAPI } from "anime365wrapper";
 import fetch from "node-fetch";
 import 'dotenv/config';
 
 const app = express();
+
+// Проверка среды
+const isProd = process.env.NODE_ENV === 'production';
+const PORT = process.env.PORT || 4000;
+
 app.use(cors({
     origin: [
         'https://gochilly.fun',
-        'https://www.gochilly.fun'
+        'https://www.gochilly.fun',
+        'http://localhost:5173', // Добавил порт Vite по умолчанию
+        'http://localhost:3000'
     ],
     methods: ['GET', 'POST'],
     credentials: true
 }));
-const options = {
-    key: fs.readFileSync('/etc/letsencrypt/live/api.gochilly.fun/privkey.pem'),
-    cert: fs.readFileSync('/etc/letsencrypt/live/api.gochilly.fun/fullchain.pem')
-};
+
 const api = new SmotretAnimeAPI();
+
 // Прокси для картинок (чтобы обходить защиту Anime365)
 app.get("/proxy-image", async (req, res) => {
     try {
@@ -59,6 +65,18 @@ app.get("/search", async (req, res) => {
     }
 });
 
-https.createServer(options, app).listen(443, () => {
-    console.log('HTTPS Server running on port 443');
-});
+if (isProd) {
+    // На сервере (Beget)
+    const options = {
+        key: fs.readFileSync('/etc/letsencrypt/live/api.gochilly.fun/privkey.pem'),
+        cert: fs.readFileSync('/etc/letsencrypt/live/api.gochilly.fun/fullchain.pem')
+    };
+    https.createServer(options, app).listen(PORT, () => {
+        console.log(`🚀 PROD: HTTPS Server running on port ${PORT}`);
+    });
+} else {
+    // На локалке (Твой ПК)
+    http.createServer(app).listen(PORT, () => {
+        console.log(`🛠️  DEV: HTTP Server running on http://localhost:${PORT}`);
+    });
+}
