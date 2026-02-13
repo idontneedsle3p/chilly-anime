@@ -7,7 +7,14 @@ import fetch from "node-fetch";
 import 'dotenv/config';
 
 const app = express();
-app.use(cors({ origin: 'https://gochilly.fun' }));
+app.use(cors({
+    origin: [
+        'https://gochilly.fun',
+        'https://www.gochilly.fun'
+    ],
+    methods: ['GET', 'POST'],
+    credentials: true
+}));
 const options = {
     key: fs.readFileSync('/etc/letsencrypt/live/api.gochilly.fun/privkey.pem'),
     cert: fs.readFileSync('/etc/letsencrypt/live/api.gochilly.fun/fullchain.pem')
