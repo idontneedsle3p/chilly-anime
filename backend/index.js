@@ -172,11 +172,7 @@ app.get("/search", async (req, res) => {
 });
 
 if (isProd) {
-    const options = {
-        key: fs.readFileSync('/etc/letsencrypt/live/api.gochilly.fun/privkey.pem'),
-        cert: fs.readFileSync('/etc/letsencrypt/live/api.gochilly.fun/fullchain.pem')
-    };
-    https.createServer(options, app).listen(PORT, () => console.log(`🚀 PROD: HTTPS Port ${PORT}`));
+    https.createServer(app).listen(PORT, () => console.log(`🚀 PROD: HTTPS Port ${PORT}`));
 } else {
     http.createServer(app).listen(PORT, () => console.log(`🛠️ DEV: HTTP Port ${PORT}`));
 }
