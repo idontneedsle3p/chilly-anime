@@ -1,20 +1,25 @@
 import express from "express";
 import fs from "fs";
-import https from 'https';
-import http from 'http';
+import http from 'http'; // Импорт https удалили, он не нужен
 import cors from "cors";
 import fetch from "node-fetch";
 import 'dotenv/config';
 
 const app = express();
-const isProd = process.env.NODE_ENV === 'production';
-const PORT = process.env.PORT || 4000;
+// Жестко ставим порт 80 для Cloudflare
+const PORT = 80;
 const DB_PATH = "./db.json";
 
-const BACKEND_URL = isProd ? 'https://api.gochilly.fun' : `http://localhost:${PORT}`;
+// Для формирования ссылок на картинки оставляем https, так как юзеры видят сайт через Cloudflare
+const BACKEND_URL = 'https://api.gochilly.fun';
 
 app.use(cors({
-    origin: ['https://gochilly.fun', 'https://www.gochilly.fun', 'https://chilly-anime.pages.dev', 'http://localhost:5173'],
+    origin: [
+        'https://gochilly.fun',
+        'https://www.gochilly.fun',
+        'https://chilly-anime.pages.dev',
+        'http://localhost:5173'
+    ],
     credentials: true
 }));
 
@@ -43,7 +48,7 @@ function formatVibixItem(shikiItem, vibixData = {}, kodikUrl = null) {
         description: vibixData.description || "Описание временно отсутствует.",
         status: shikiItem.status === "released" ? "Завершен" : "Выходит",
         vibixUrl: vibixData.iframe_url || null,
-        kodikUrl: kodikUrl // Сохраняем ссылку на Kodik
+        kodikUrl: kodikUrl
     };
 }
 
@@ -58,7 +63,6 @@ app.get("/proxy-image", async (req, res) => {
     }
 });
 
-// Нам больше не нужен KODIK_TOKEN, мы генерируем ссылку напрямую!
 async function fetchWithPlayer(data, VIBIX_TOKEN) {
     const results = [];
     const cache = getCache();
@@ -74,14 +78,9 @@ async function fetchWithPlayer(data, VIBIX_TOKEN) {
 
         console.log(`\n--- Обработка: ${item.russian || item.name} ---`);
 
-        // БЛОК KODIK (Секретный метод без API!)
-        // Генерируем прямую ссылку iframe, используя ID Шикимори
         const currentKodikUrl = `https://kodik.info/find-player?shikimoriID=${item.id}`;
-        console.log(`[+] Плеер Kodik сгенерирован (без токена).`);
-
         let enriched = formatVibixItem(item, {}, currentKodikUrl);
 
-        // БЛОК VIBIX (Остался полностью без изменений, как мы настроили)
         try {
             const extRes = await fetch(`https://shikimori.one/api/animes/${item.id}/external_links`);
             const extLinks = await extRes.json();
@@ -96,26 +95,19 @@ async function fetchWithPlayer(data, VIBIX_TOKEN) {
             }
 
             if (kpId) {
-                console.log(`[+] Шикимори выдал KP ID: ${kpId}. Проверяем Vibix...`);
                 const vRes = await fetch(`https://vibix.org/api/v1/publisher/videos/kp/${kpId}`, {
                     headers: { 'Authorization': `Bearer ${VIBIX_TOKEN}` }
                 });
                 const vData = await vRes.json();
 
                 if (vData?.iframe_url) {
-                    enriched = formatVibixItem(item, vData, currentKodikUrl); // Сохраняем и Vibix, и Kodik
-                    console.log(`[✔] Плеер Vibix НАЙДЕН!`);
-                } else {
-                    console.log(`[-] В базе Vibix нет плеера.`);
+                    enriched = formatVibixItem(item, vData, currentKodikUrl);
                 }
-            } else {
-                console.log(`[-] Нет привязки к Кинопоиску на Shikimori.`);
             }
         } catch (e) {
             console.error(`[!] Ошибка Vibix API:`, e.message);
         }
 
-        // Небольшая задержка, чтобы Шикимори нас не забанил
         await new Promise(resolve => setTimeout(resolve, 250));
 
         cache[sId] = enriched;
@@ -129,15 +121,10 @@ async function fetchWithPlayer(data, VIBIX_TOKEN) {
 
 app.get("/popular", async (req, res) => {
     try {
-        // Добавили &censored=true в конец ссылки
         const response = await fetch("https://shikimori.one/api/animes?limit=20&order=ranked&status=ongoing&kind=tv&censored=true");
         let data = await response.json();
-
         if (!Array.isArray(data)) return res.json([]);
-
-        // ЖЕСТКИЙ ФИЛЬТР: вырезаем всё, где рейтинг 'rx' (хентай)
         data = data.filter(item => item.rating !== 'rx');
-
         const results = await fetchWithPlayer(data, process.env.VITE_VIBIX_TOKEN || process.env.VIBIX_TOKEN);
         res.json(results);
     } catch (e) { res.status(500).json([]); }
@@ -146,24 +133,15 @@ app.get("/popular", async (req, res) => {
 app.get("/search", async (req, res) => {
     try {
         const { q, genre, kind } = req.query;
-
-        // Добавили censored: "true" в параметры поиска
         const shikiParams = new URLSearchParams({
-            limit: 15,
-            order: "popularity",
-            search: q || "",
-            censored: "true" // Скрываем 18+
+            limit: 15, order: "popularity", search: q || "", censored: "true"
         });
-
         if (genre) shikiParams.append("genre", genre);
         if (kind) shikiParams.append("kind", kind);
 
         const response = await fetch(`https://shikimori.one/api/animes?${shikiParams.toString()}`);
         let data = await response.json();
-
         if (!Array.isArray(data)) return res.json([]);
-
-        // ЖЕСТКИЙ ФИЛЬТР: вырезаем всё, где рейтинг 'rx' (хентай)
         data = data.filter(item => item.rating !== 'rx');
 
         const results = await fetchWithPlayer(data, process.env.VITE_VIBIX_TOKEN || process.env.VIBIX_TOKEN);
@@ -171,8 +149,11 @@ app.get("/search", async (req, res) => {
     } catch (e) { res.status(500).json([]); }
 });
 
-if (isProd) {
-    https.createServer(app).listen(PORT, () => console.log(`🚀 PROD: HTTPS Port ${PORT}`));
-} else {
-    http.createServer(app).listen(PORT, () => console.log(`🛠️ DEV: HTTP Port ${PORT}`));
-}
+// === ВОТ САМОЕ ВАЖНОЕ ИСПРАВЛЕНИЕ ===
+// Мы используем http.createServer и слушаем порт 80
+// Никакого https модуля, никаких сертификатов.
+const server = http.createServer(app);
+
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Сервер запущен. Порт: ${PORT}. Режим: Cloudflare HTTP`);
+});
