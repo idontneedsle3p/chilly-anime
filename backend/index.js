@@ -1,16 +1,13 @@
 import express from "express";
 import fs from "fs";
-import http from 'http'; // Импорт https удалили, он не нужен
+import http from 'http';
 import cors from "cors";
 import fetch from "node-fetch";
 import 'dotenv/config';
 
 const app = express();
-// Жестко ставим порт 80 для Cloudflare
 const PORT = 80;
 const DB_PATH = "./db.json";
-
-// Для формирования ссылок на картинки оставляем https, так как юзеры видят сайт через Cloudflare
 const BACKEND_URL = 'https://api.gochilly.fun';
 
 app.use(cors({
@@ -32,10 +29,7 @@ const getCache = () => {
 const saveCache = (cache) => fs.writeFileSync(DB_PATH, JSON.stringify(cache, null, 2));
 
 function formatVibixItem(shikiItem, vibixData = {}, kodikUrl = null) {
-    // Берем только "хвост" ссылки, например: /system/animes/original/123.jpg
     const rawShikiPath = shikiItem.image?.original || '/assets/globals/missing_original.jpg';
-
-    // Формируем безопасную ссылку через параметр path
     const finalPoster = vibixData.poster_url
         ? vibixData.poster_url
         : `${BACKEND_URL}/proxy-image?path=${encodeURIComponent(rawShikiPath)}`;
@@ -59,8 +53,6 @@ app.get("/proxy-image", async (req, res) => {
     try {
         const imagePath = req.query.path;
         if (!imagePath) return res.status(404).send('No path provided');
-
-        // Сервер сам знает, что картинки лежат на Шикимори
         const targetUrl = `https://shikimori.one${imagePath}`;
 
         const response = await fetch(targetUrl, {
@@ -75,7 +67,6 @@ app.get("/proxy-image", async (req, res) => {
         }
 
         res.setHeader("Content-Type", response.headers.get("content-type"));
-        // Кэшируем картинку в браузере и Cloudflare на 7 дней
         res.setHeader("Cache-Control", "public, max-age=604800, immutable");
 
         response.body.pipe(res);
@@ -171,9 +162,6 @@ app.get("/search", async (req, res) => {
     } catch (e) { res.status(500).json([]); }
 });
 
-// === ВОТ САМОЕ ВАЖНОЕ ИСПРАВЛЕНИЕ ===
-// Мы используем http.createServer и слушаем порт 80
-// Никакого https модуля, никаких сертификатов.
 const server = http.createServer(app);
 
 server.listen(PORT, '0.0.0.0', () => {
