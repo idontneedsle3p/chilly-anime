@@ -14,7 +14,7 @@ const DB_PATH = "./db.json";
 const BACKEND_URL = isProd ? 'https://api.gochilly.fun' : `http://localhost:${PORT}`;
 
 app.use(cors({
-    origin: ['https://gochilly.fun', 'https://www.gochilly.fun', 'http://localhost:5173'],
+    origin: ['https://gochilly.fun', 'https://www.gochilly.fun', 'https://chilly-anime.pages.dev', 'http://localhost:5173'],
     credentials: true
 }));
 
