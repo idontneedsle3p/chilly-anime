@@ -6,14 +6,10 @@ import fetch from "node-fetch";
 import 'dotenv/config';
 
 const app = express();
-// Берем порт из .env, если его там нет — ставим 4000 по умолчанию
 const PORT = process.env.PORT || 4000;
 const DB_PATH = "./db.json";
 const BACKEND_URL = 'https://api.gochilly.fun';
-
-// Магическое число для красивой сетки (делится на 2, 3, 4, 6)
-const GRID_LIMIT = 24;
-// Увеличили буфер, чтобы точно заполнить сетку после всех фильтраций
+const GRID_LIMIT = 28;
 const FETCH_BUFFER = 45;
 
 app.use(cors({
@@ -86,7 +82,6 @@ async function fetchWithPlayer(data, VIBIX_TOKEN) {
     const cache = getCache();
     let cacheChanged = false;
 
-    // Гарантируем, что обрабатываем ровно столько, сколько нужно для сетки
     const itemsToProcess = data.slice(0, GRID_LIMIT);
 
     for (const item of itemsToProcess) {
