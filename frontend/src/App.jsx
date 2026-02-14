@@ -10,7 +10,7 @@ const globalStyles = `
   
   body {
     font-family: 'Manrope', sans-serif;
-    background: #000000;
+    background: #020305;
     margin: 0;
     overflow-x: hidden;
     color: #f8fafc;
@@ -22,98 +22,55 @@ const globalStyles = `
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
   ::-webkit-scrollbar-thumb:hover { background: #F43F5E; }
 
+  /* ФОН */
   .space-bg {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: #020308;
+    background: radial-gradient(circle at 50% 120%, #1e1b4b 0%, #000000 70%);
     z-index: -10; pointer-events: none;
-    overflow: hidden;
-    /* Убираем размытие с контейнера для производительности */
-    transform: translateZ(0);
   }
 
-  .stars { 
+  /* Слой 1: Крупные яркие звезды (Добавил больше точек) */
+  .stars-lg {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    /* Важно: повторяем паттерн по всему экрану */
+    background-image: 
+        radial-gradient(2.5px 2.5px at 50px 50px, #fff, transparent),
+        radial-gradient(2px 2px at 150px 250px, #fff, transparent),
+        radial-gradient(2.5px 2.5px at 300px 100px, rgba(255,255,255,0.9), transparent),
+        radial-gradient(2px 2px at 450px 50px, #fff, transparent),
+        radial-gradient(2px 2px at 350px 350px, #fff, transparent),
+        radial-gradient(2.5px 2.5px at 100px 400px, #fff, transparent),
+        radial-gradient(2px 2px at 250px 450px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(2px 2px at 480px 480px, #fff, transparent);
+    background-size: 500px 500px;
     background-repeat: repeat;
+    animation: drift 100s linear infinite;
+    opacity: 0.95;
   }
-  
-  /* СЛОЙ 1: Близкие яркие звезды 
-     Плотный паттерн, звезды есть и в начале (0%), и в конце (90%+) координат
-  */
-  .star-layer-1 {
+
+  /* Слой 2: Мелкая россыпь (Увеличил плотность в 3 раза) */
+  .stars-sm {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background-image: 
-      radial-gradient(2px 2px at 10% 10%, #ffffff, transparent),
-      radial-gradient(2px 2px at 90% 90%, #ffffff, transparent), /* Заполняет правый нижний угол */
-      radial-gradient(2px 2px at 30% 40%, rgba(255,255,255,0.9), transparent),
-      radial-gradient(2px 2px at 70% 80%, rgba(255,255,255,0.9), transparent),
-      radial-gradient(2.5px 2.5px at 50% 50%, #ffffff, transparent),
-      radial-gradient(2px 2px at 15% 90%, #ffffff, transparent), /* Заполняет левый низ */
-      radial-gradient(2px 2px at 95% 15%, rgba(255,255,255,0.8), transparent), /* Заполняет правый верх */
-      
-      /* Цветные акценты для глубины */
-      radial-gradient(3px 3px at 45% 75%, rgba(59, 130, 246, 1), transparent), 
-      radial-gradient(3px 3px at 85% 25%, rgba(244, 63, 94, 0.8), transparent);
-      
-    background-size: 400px 400px; /* Размер плитки паттерна */
-    animation: moveStars 60s linear infinite;
-    opacity: 0.9;
-    will-change: background-position;
-  }
-  
-  /* СЛОЙ 2: Средние звезды (побольше их, чтобы не было пустот) */
-  .star-layer-2 {
-    background-image: 
-      radial-gradient(1.5px 1.5px at 20% 80%, rgba(255,255,255,0.8), transparent),
-      radial-gradient(1.5px 1.5px at 80% 20%, rgba(255,255,255,0.8), transparent),
-      radial-gradient(1.5px 1.5px at 10% 30%, #ffffff, transparent),
-      radial-gradient(1.5px 1.5px at 90% 70%, #ffffff, transparent),
-      radial-gradient(2px 2px at 50% 10%, rgba(255,255,255,0.6), transparent),
-      radial-gradient(2px 2px at 50% 90%, rgba(255,255,255,0.6), transparent);
-      
-    background-size: 300px 300px;
-    animation: moveStars 100s linear infinite;
+        radial-gradient(1px 1px at 20px 30px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 90px 80px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 160px 120px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1.5px 1.5px at 200px 20px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 240px 180px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 300px 250px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 380px 10px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1.5px 1.5px at 400px 300px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 450px 150px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 50px 350px, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 120px 450px, rgba(255,255,255,0.7), transparent);
+    background-size: 500px 500px;
+    background-repeat: repeat;
+    animation: drift 150s linear infinite;
     opacity: 0.6;
-    will-change: background-position;
   }
 
-  /* СЛОЙ 3: Далекая пыль (очень медленная) */
-  .star-layer-3 {
-    background-image: radial-gradient(1px 1px at 50% 50%, rgba(255,255,255,0.4), transparent);
-    background-size: 100px 100px;
-    animation: moveStars 150s linear infinite;
-    will-change: background-position;
-  }
-
-  /* Анимация двигает ФОН, а не DIV. 
-     Благодаря repeat звезды бесконечны.
-  */
-  @keyframes moveStars {
+  @keyframes drift {
     from { background-position: 0 0; }
-    to { background-position: 1000px 1000px; } /* Двигаем вправо-вниз */
-  }
-
-  .cosmic-entity {
-    position: absolute; border-radius: 50%;
-    filter: blur(120px);
-    /* GPU ускорение для пятен света */
-    transform: translateZ(0); 
-    will-change: transform;
-    animation: floatEntity 30s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .entity-blue { width: 60vw; height: 60vw; background: #0c1b4a; top: -30%; left: -20%; opacity: 0.2; }
-  .entity-red { width: 50vw; height: 50vw; background: #4a071c; bottom: -20%; right: -20%; animation-delay: -10s; animation-direction: alternate-reverse; opacity: 0.2; }
-
-  @keyframes floatEntity {
-    0% { transform: translate3d(0, 0, 0) scale(1); }
-    100% { transform: translate3d(5vw, -5vh, 0) scale(1.1); }
-  }
-
-  .glass-card { transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease; }
-  .glass-card:hover { 
-    transform: translateY(-8px) scale(1.01); 
-    box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.8), 0 0 15px rgba(244, 63, 94, 0.2); 
-    border-color: rgba(244, 63, 94, 0.4) !important; 
-    z-index: 10; 
+    to { background-position: 500px 500px; }
   }
 `;
 
@@ -169,7 +126,6 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Мемоизация списков для предотвращения лишних ререндеров
   const displayedList = useMemo(() => hasSearched ? animeList : popularList, [hasSearched, animeList, popularList]);
 
   return (
@@ -177,11 +133,8 @@ export default function App() {
       <style>{globalStyles}</style>
 
       <div className="space-bg">
-        <div className="cosmic-entity entity-blue"></div>
-        <div className="cosmic-entity entity-red"></div>
-        <div className="stars star-layer-3"></div>
-        <div className="stars star-layer-2"></div>
-        <div className="stars star-layer-1"></div>
+        <div className="stars-lg"></div>
+        <div className="stars-sm"></div>
       </div>
 
       <div style={{ flex: 1, zIndex: 1 }}>
@@ -189,25 +142,20 @@ export default function App() {
           <SearchHeader query={query} setQuery={setQuery} onSearch={search} filters={filters} setFilters={setFilters} onGoHome={goHome} />
         ) : (
           <nav style={{
-            padding: '20px 4vw',
-            display: 'flex', alignItems: 'center',
-            background: 'rgba(0,0,0,0.8)',
-            backdropFilter: 'blur(10px)',
+            padding: '20px 4vw', display: 'flex', alignItems: 'center',
+            background: 'rgba(5, 5, 10, 0.9)', backdropFilter: 'blur(10px)',
             borderBottom: '1px solid rgba(255,255,255,0.05)',
             position: 'sticky', top: 0, zIndex: 100, justifyContent: 'space-between'
           }}>
-            <div onClick={goHome} style={{ fontSize: '1.5rem', fontWeight: '800', letterSpacing: '-1px', cursor: 'pointer', textShadow: '0 4px 20px rgba(0,0,0,0.8)' }}>
+            <div onClick={goHome} style={{ fontSize: '1.5rem', fontWeight: '800', cursor: 'pointer', letterSpacing: '-1px' }}>
               CHILLY<span style={{ color: '#F43F5E' }}>ANIME</span>
             </div>
             <button
               onClick={() => setActiveItem(null)}
               style={{
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                color: '#fff', padding: '8px 20px', borderRadius: '12px', cursor: 'pointer',
-                fontWeight: '600', transition: 'all 0.2s', fontSize: '0.9rem'
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff',
+                padding: '8px 20px', borderRadius: '12px', cursor: 'pointer', fontWeight: '600'
               }}
-              onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.15)'}
-              onMouseLeave={e => e.target.style.background = 'rgba(255,255,255,0.05)'}
             >
               ✕ Назад
             </button>
@@ -225,7 +173,7 @@ export default function App() {
             </h2>
 
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '100px', color: '#64748b', fontSize: '1.2rem' }}>Загрузка данных...</div>
+              <div style={{ textAlign: 'center', padding: '100px', color: '#64748b' }}>Загрузка...</div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '25px' }}>
                 {displayedList.map((item, idx) => (
@@ -237,7 +185,7 @@ export default function App() {
 
           {history.length > 0 && (
             <section style={{ marginTop: '80px', padding: '40px 0' }}>
-              <h3 style={{ color: '#64748b', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '20px', fontWeight: '800' }}>История</h3>
+              <h3 style={{ color: '#64748b', fontSize: '1rem', textTransform: 'uppercase', marginBottom: '20px', fontWeight: '800', letterSpacing: '2px' }}>История</h3>
               <div style={{ display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '20px' }} className="hide-scroll">
                 {history.map((item, idx) => (
                   <div key={`hist-${item.id || idx}`} style={{ minWidth: '180px', maxWidth: '180px' }}>
@@ -251,12 +199,28 @@ export default function App() {
       </div>
 
       <footer style={{
-        textAlign: 'center', padding: '60px 20px 40px', marginTop: 'auto',
-        background: 'linear-gradient(0deg, #000 20%, transparent 100%)',
+        textAlign: 'center', padding: '80px 20px 40px', marginTop: 'auto',
+        background: 'linear-gradient(0deg, #020305 30%, transparent 100%)',
         color: '#64748b', position: 'relative', zIndex: 10
       }}>
-        <div style={{ marginBottom: '8px', fontWeight: '800', letterSpacing: '2px', color: '#F43F5E', textTransform: 'uppercase', fontSize: '0.75rem' }}>⚡ Fast Build</div>
-        <p style={{ margin: 0, fontSize: '0.9rem' }}>Chilly Anime © 2026</p>
+        <div style={{ marginBottom: '15px', fontWeight: '800', letterSpacing: '2px', color: '#F43F5E', textTransform: 'uppercase', fontSize: '0.75rem', opacity: 0.8 }}>
+          ⚡ Alpha Build
+        </div>
+        <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', fontWeight: '600' }}>
+          Chilly Anime © 2026
+        </p>
+        <div>
+          <a
+            href="https://t.me/chilly_anime"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#3B82F6', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '700', transition: 'color 0.2s' }}
+            onMouseEnter={e => e.target.style.color = '#60a5fa'}
+            onMouseLeave={e => e.target.style.color = '#3B82F6'}
+          >
+            Telegram
+          </a>
+        </div>
       </footer>
     </div>
   );

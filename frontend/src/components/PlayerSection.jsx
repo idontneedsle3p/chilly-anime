@@ -1,27 +1,25 @@
 import React, { useState, useEffect } from 'react';
 
 const styles = {
-    // Оптимизация: Убрали backdrop-filter: blur(20px), заменили на более плотный цвет.
-    // На 4K мониторах blur на большом блоке - это убийца FPS.
     container: {
         marginBottom: '60px', borderRadius: '24px', overflow: 'hidden',
-        background: 'rgba(15, 15, 20, 0.95)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: '0 20px 50px -10px rgba(0,0,0,0.7)',
-        transform: 'translateZ(0)'
+        background: 'rgba(20, 20, 30, 0.6)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
     },
     headerPanel: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 30px', background: 'rgba(255,255,255,0.03)' },
-    tabsContainer: { display: 'flex', gap: '12px', background: 'rgba(0,0,0,0.4)', padding: '4px', borderRadius: '12px' },
+    tabsContainer: { display: 'flex', gap: '12px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '12px' },
     tabBtn: { padding: '8px 20px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', border: 'none', transition: 'all 0.2s', fontSize: '0.9rem' },
     videoBox: { position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000' },
     iframe: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' },
-    noPlayer: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#030712', color: '#64748b' },
+    noPlayer: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#050505', color: '#64748b' },
     details: { padding: '40px' },
-    title: { fontSize: '2.5rem', fontWeight: '800', margin: '0 0 20px 0', color: '#fff', letterSpacing: '-1px' },
+    title: { fontSize: '2.5rem', fontWeight: '800', margin: '0 0 20px 0', color: '#fff', textShadow: '0 0 30px rgba(255,255,255,0.1)' },
     meta: { display: 'flex', gap: '15px', marginBottom: '25px', alignItems: 'center', flexWrap: 'wrap' },
     rating: { color: '#000', background: '#fbbf24', padding: '4px 12px', borderRadius: '6px', fontWeight: '800', fontSize: '1rem' },
     tag: { padding: '4px 12px', borderRadius: '6px', background: 'rgba(255,255,255,0.1)', color: '#e2e8f0', fontSize: '0.9rem', fontWeight: '600' },
-    description: { color: '#94a3b8', lineHeight: '1.7', fontSize: '1.1rem', maxWidth: '900px' }
+    description: { color: '#cbd5e1', lineHeight: '1.7', fontSize: '1.1rem', maxWidth: '900px' }
 };
 
 export const PlayerSection = ({ item }) => {
@@ -43,7 +41,7 @@ export const PlayerSection = ({ item }) => {
             <div style={styles.headerPanel}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '50%', boxShadow: '0 0 10px #10b981' }}></div>
-                    <span style={{ color: '#fff', fontWeight: '700', letterSpacing: '0.5px', fontSize: '0.9rem' }}>SERVER ONLINE</span>
+                    <span style={{ color: '#fff', fontWeight: '700', fontSize: '0.9rem', letterSpacing: '0.5px' }}>SERVER ONLINE</span>
                 </div>
 
                 {(item.vibixUrl || item.kodikUrl) && (
