@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { Card } from './components/Card';
 import { PlayerSection } from './components/PlayerSection';
 import { SearchHeader } from './components/SearchHeader';
@@ -22,14 +24,12 @@ const globalStyles = `
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
   ::-webkit-scrollbar-thumb:hover { background: #F43F5E; }
 
-  /* ФОН */
   .space-bg {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: radial-gradient(circle at 50% 120%, #1e1b4b 0%, #000000 70%);
     z-index: -10; pointer-events: none;
   }
 
-  /* Слой 1: Крупные яркие звезды (Добавил больше точек) */
   .stars-lg {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background-image: 
@@ -47,7 +47,6 @@ const globalStyles = `
     opacity: 0.95;
   }
 
-  /* Слой 2: Мелкая россыпь (Увеличил плотность в 3 раза) */
   .stars-sm {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background-image: 
@@ -72,61 +71,211 @@ const globalStyles = `
     from { background-position: 0 0; }
     to { background-position: 500px 500px; }
   }
+
+  .load-more-btn {
+    display: block; margin: 40px auto; padding: 12px 40px;
+    background: transparent; color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 30px; font-weight: 700; cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .load-more-btn:hover {
+    background: #fff; color: #000; border-color: #fff;
+    box-shadow: 0 0 20px rgba(255,255,255,0.3);
+  }
+  .load-more-btn:disabled {
+    opacity: 0.5; cursor: not-allowed;
+  }
 `;
 
-export default function App() {
+const Home = ({ onCardClick }) => {
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState({ genre: "" });
   const [animeList, setAnimeList] = useState([]);
   const [popularList, setPopularList] = useState([]);
-  const [history, setHistory] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("anime_history") || "[]"); }
-    catch (e) { return []; }
-  });
-  const [activeItem, setActiveItem] = useState(null);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const resultsRef = useRef(null);
 
-  useEffect(() => {
-    fetch(`${apiUrl}/popular`)
-      .then(res => res.json())
-      .then(data => setPopularList(Array.isArray(data) ? data : []))
-      .catch(err => console.error("Ошибка:", err));
+  // ПАГИНАЦИЯ
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const favorites = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem("anime_favorites") || "[]"); } catch { return []; }
+  }, []);
+  const history = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem("anime_history") || "[]"); } catch { return []; }
   }, []);
 
-  useEffect(() => { if (filters.genre) search(); }, [filters.genre]);
+  const resultsRef = useRef(null);
 
-  const search = async () => {
+  // Загрузка популярных (первая страница)
+  useEffect(() => {
+    setLoading(true);
+    fetch(`${apiUrl}/popular?page=1`)
+      .then(res => res.json())
+      .then(data => {
+        setPopularList(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  // Сброс при смене фильтра/поиска
+  useEffect(() => {
+    if (filters.genre) {
+      setPage(1);
+      search(1, true);
+    }
+  }, [filters.genre]);
+
+  const search = async (pageNum = 1, isNewSearch = false) => {
     if (!query.trim() && !filters.genre) return;
-    setLoading(true); setHasSearched(true);
+    if (isNewSearch) {
+      setLoading(true);
+      setHasSearched(true);
+      setAnimeList([]); // Очищаем список при новом поиске
+    } else {
+      setLoadingMore(true);
+    }
+
     try {
-      const res = await fetch(`${apiUrl}/search?q=${encodeURIComponent(query)}&genre=${filters.genre}`);
+      const res = await fetch(`${apiUrl}/search?q=${encodeURIComponent(query)}&genre=${filters.genre}&page=${pageNum}`);
       const data = await res.json();
-      setAnimeList(Array.isArray(data) ? data : []);
-      resultsRef.current?.scrollIntoView({ behavior: "smooth" });
+      const newData = Array.isArray(data) ? data : [];
+
+      if (isNewSearch) {
+        setAnimeList(newData);
+        if (resultsRef.current) resultsRef.current.scrollIntoView({ behavior: "smooth" });
+      } else {
+        setAnimeList(prev => [...prev, ...newData]);
+      }
+
     } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
   };
+
+  // Функция загрузки следующей страницы
+  const loadMore = async () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    setLoadingMore(true);
+
+    const endpoint = hasSearched
+      ? `${apiUrl}/search?q=${encodeURIComponent(query)}&genre=${filters.genre}&page=${nextPage}`
+      : `${apiUrl}/popular?page=${nextPage}`;
+
+    try {
+      const res = await fetch(endpoint);
+      const data = await res.json();
+      const newData = Array.isArray(data) ? data : [];
+
+      if (hasSearched) {
+        setAnimeList(prev => [...prev, ...newData]);
+      } else {
+        setPopularList(prev => [...prev, ...newData]);
+      }
+    } catch (e) { console.error(e); }
+    finally { setLoadingMore(false); }
+  };
+
+  const displayedList = hasSearched ? animeList : popularList;
+
+  return (
+    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 20px', zIndex: 1, position: 'relative' }}>
+      <SearchHeader
+        query={query}
+        setQuery={setQuery}
+        onSearch={() => { setPage(1); search(1, true); }}
+        filters={filters}
+        setFilters={setFilters}
+        onGoHome={() => window.location.reload()}
+      />
+
+      <section ref={resultsRef} style={{ marginTop: '-40px', position: 'relative', zIndex: 2 }}>
+
+        {favorites.length > 0 && !hasSearched && (
+          <div style={{ marginBottom: '60px' }}>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '20px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ color: '#F43F5E' }}>❤️</span> Избранное
+            </h2>
+            <div style={{ display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '20px' }} className="hide-scroll">
+              {favorites.map((item, idx) => (
+                <div key={`fav-${item.id || idx}`} style={{ minWidth: '180px', maxWidth: '180px' }}>
+                  <Card item={item} onClick={onCardClick} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <h2 style={{ fontSize: '2rem', marginBottom: '30px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '15px' }}>
+          {hasSearched ? `Результаты поиска` : (
+            <><span style={{ width: '12px', height: '12px', background: '#F43F5E', borderRadius: '50%', boxShadow: '0 0 15px #F43F5E' }}></span> В тренде</>
+          )}
+        </h2>
+
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '100px', color: '#64748b' }}>Загрузка...</div>
+        ) : (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '25px' }}>
+              {displayedList.map((item, idx) => (
+                <Card key={`${item.id}-${idx}`} item={item} onClick={onCardClick} />
+              ))}
+            </div>
+
+            {/* Кнопка "Показать еще" */}
+            {displayedList.length > 0 && (
+              <button
+                className="load-more-btn"
+                onClick={loadMore}
+                disabled={loadingMore}
+              >
+                {loadingMore ? 'Загрузка...' : 'Показать еще'}
+              </button>
+            )}
+          </>
+        )}
+      </section>
+
+      {history.length > 0 && (
+        <section style={{ marginTop: '80px', padding: '40px 0' }}>
+          <h3 style={{ color: '#64748b', fontSize: '1rem', textTransform: 'uppercase', marginBottom: '20px', fontWeight: '800', letterSpacing: '2px' }}>История</h3>
+          <div style={{ display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '20px' }} className="hide-scroll">
+            {history.map((item, idx) => (
+              <div key={`hist-${item.id || idx}`} style={{ minWidth: '180px', maxWidth: '180px' }}>
+                <Card item={item} onClick={onCardClick} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+};
+
+export default function App() {
+  return (
+    <HelmetProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </HelmetProvider>
+  );
+}
+
+function AppContent() {
+  const navigate = useNavigate();
+  const [cinemaMode, setCinemaMode] = useState(false);
 
   const handleCardClick = (item) => {
-    setActiveItem(item);
-    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
-    setHistory(prev => {
-      const id = item.shikimoriId || item.id;
-      const filtered = prev.filter(h => (h.shikimoriId || h.id) !== id);
-      const updated = [item, ...filtered].slice(0, 15);
-      localStorage.setItem("anime_history", JSON.stringify(updated));
-      return updated;
-    });
+    const id = item.shikimoriId || item.id;
+    navigate(`/watch/${id}`, { state: { item } });
   };
-
-  const goHome = () => {
-    setActiveItem(null); setQuery(""); setFilters({ genre: "" }); setHasSearched(false); setAnimeList([]);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const displayedList = useMemo(() => hasSearched ? animeList : popularList, [hasSearched, animeList, popularList]);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
@@ -137,71 +286,22 @@ export default function App() {
         <div className="stars-sm"></div>
       </div>
 
-      <div style={{ flex: 1, zIndex: 1 }}>
-        {!activeItem ? (
-          <SearchHeader query={query} setQuery={setQuery} onSearch={search} filters={filters} setFilters={setFilters} onGoHome={goHome} />
-        ) : (
-          <nav style={{
-            padding: '20px 4vw', display: 'flex', alignItems: 'center',
-            background: 'rgba(5, 5, 10, 0.9)', backdropFilter: 'blur(10px)',
-            borderBottom: '1px solid rgba(255,255,255,0.05)',
-            position: 'sticky', top: 0, zIndex: 100, justifyContent: 'space-between'
-          }}>
-            <div onClick={goHome} style={{ fontSize: '1.5rem', fontWeight: '800', cursor: 'pointer', letterSpacing: '-1px' }}>
-              CHILLY<span style={{ color: '#F43F5E' }}>ANIME</span>
-            </div>
-            <button
-              onClick={() => setActiveItem(null)}
-              style={{
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff',
-                padding: '8px 20px', borderRadius: '12px', cursor: 'pointer', fontWeight: '600'
-              }}
-            >
-              ✕ Назад
-            </button>
-          </nav>
-        )}
-
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 20px' }}>
-          {activeItem && <div style={{ paddingTop: '20px' }}><PlayerSection item={activeItem} /></div>}
-
-          <section ref={resultsRef} style={{ marginTop: activeItem ? '40px' : '-40px', position: 'relative', zIndex: 2 }}>
-            <h2 style={{ fontSize: '2rem', marginBottom: '30px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '15px' }}>
-              {hasSearched ? `Результаты поиска` : (
-                <><span style={{ width: '12px', height: '12px', background: '#F43F5E', borderRadius: '50%', boxShadow: '0 0 15px #F43F5E' }}></span> В тренде</>
-              )}
-            </h2>
-
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '100px', color: '#64748b' }}>Загрузка...</div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '25px' }}>
-                {displayedList.map((item, idx) => (
-                  <Card key={item.id || idx} item={item} onClick={handleCardClick} />
-                ))}
-              </div>
-            )}
-          </section>
-
-          {history.length > 0 && (
-            <section style={{ marginTop: '80px', padding: '40px 0' }}>
-              <h3 style={{ color: '#64748b', fontSize: '1rem', textTransform: 'uppercase', marginBottom: '20px', fontWeight: '800', letterSpacing: '2px' }}>История</h3>
-              <div style={{ display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '20px' }} className="hide-scroll">
-                {history.map((item, idx) => (
-                  <div key={`hist-${item.id || idx}`} style={{ minWidth: '180px', maxWidth: '180px' }}>
-                    <Card item={item} onClick={handleCardClick} />
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
+      <div style={{ flex: 1, zIndex: 1, position: 'relative' }}>
+        <Routes>
+          <Route path="/" element={<Home onCardClick={handleCardClick} />} />
+          <Route
+            path="/watch/:id"
+            element={<PlayerSection cinemaMode={cinemaMode} setCinemaMode={setCinemaMode} />}
+          />
+        </Routes>
       </div>
 
       <footer style={{
         textAlign: 'center', padding: '80px 20px 40px', marginTop: 'auto',
         background: 'linear-gradient(0deg, #020305 30%, transparent 100%)',
-        color: '#64748b', position: 'relative', zIndex: 10
+        color: '#64748b', position: 'relative', zIndex: 10,
+        opacity: cinemaMode ? 0 : 1, transition: 'opacity 0.5s',
+        pointerEvents: cinemaMode ? 'none' : 'auto'
       }}>
         <div style={{ marginBottom: '15px', fontWeight: '800', letterSpacing: '2px', color: '#F43F5E', textTransform: 'uppercase', fontSize: '0.75rem', opacity: 0.8 }}>
           ⚡ Alpha Build
@@ -210,16 +310,7 @@ export default function App() {
           Chilly Anime © 2026
         </p>
         <div>
-          <a
-            href="https://t.me/chilly_anime"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: '#3B82F6', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '700', transition: 'color 0.2s' }}
-            onMouseEnter={e => e.target.style.color = '#60a5fa'}
-            onMouseLeave={e => e.target.style.color = '#3B82F6'}
-          >
-            Telegram
-          </a>
+          <a href="https://t.me/chilly_anime" target="_blank" rel="noopener noreferrer" style={{ color: '#3B82F6', textDecoration: 'none', fontSize: '0.9rem', fontWeight: '700' }}>Telegram</a>
         </div>
       </footer>
     </div>

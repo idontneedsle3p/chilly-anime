@@ -6,9 +6,15 @@ import fetch from "node-fetch";
 import 'dotenv/config';
 
 const app = express();
-const PORT = 80;
+// Берем порт из .env, если его там нет — ставим 4000 по умолчанию
+const PORT = process.env.PORT || 4000;
 const DB_PATH = "./db.json";
 const BACKEND_URL = 'https://api.gochilly.fun';
+
+// Магическое число для красивой сетки (делится на 2, 3, 4, 6)
+const GRID_LIMIT = 24;
+// Увеличили буфер, чтобы точно заполнить сетку после всех фильтраций
+const FETCH_BUFFER = 45;
 
 app.use(cors({
     origin: [
@@ -71,7 +77,6 @@ app.get("/proxy-image", async (req, res) => {
 
         response.body.pipe(res);
     } catch (e) {
-        console.error("Proxy error:", e.message);
         res.redirect("https://via.placeholder.com/225x320?text=Error");
     }
 });
@@ -81,15 +86,16 @@ async function fetchWithPlayer(data, VIBIX_TOKEN) {
     const cache = getCache();
     let cacheChanged = false;
 
-    for (const item of data) {
+    // Гарантируем, что обрабатываем ровно столько, сколько нужно для сетки
+    const itemsToProcess = data.slice(0, GRID_LIMIT);
+
+    for (const item of itemsToProcess) {
         const sId = String(item.id);
 
         if (cache[sId] && cache[sId].title) {
             results.push(cache[sId]);
             continue;
         }
-
-        console.log(`\n--- Обработка: ${item.russian || item.name} ---`);
 
         const currentKodikUrl = `https://kodik.info/find-player?shikimoriID=${item.id}`;
         let enriched = formatVibixItem(item, {}, currentKodikUrl);
@@ -118,10 +124,10 @@ async function fetchWithPlayer(data, VIBIX_TOKEN) {
                 }
             }
         } catch (e) {
-            console.error(`[!] Ошибка Vibix API:`, e.message);
+            console.error(`[!] API Error:`, e.message);
         }
 
-        await new Promise(resolve => setTimeout(resolve, 250));
+        await new Promise(resolve => setTimeout(resolve, 200));
 
         cache[sId] = enriched;
         results.push(enriched);
@@ -134,10 +140,14 @@ async function fetchWithPlayer(data, VIBIX_TOKEN) {
 
 app.get("/popular", async (req, res) => {
     try {
-        const response = await fetch("https://shikimori.one/api/animes?limit=20&order=ranked&status=ongoing&kind=tv&censored=true");
+        const page = req.query.page || 1;
+        const response = await fetch(`https://shikimori.one/api/animes?limit=${FETCH_BUFFER}&page=${page}&order=ranked&status=ongoing&kind=tv&censored=true`);
         let data = await response.json();
         if (!Array.isArray(data)) return res.json([]);
+
         data = data.filter(item => item.rating !== 'rx');
+        data = data.slice(0, GRID_LIMIT);
+
         const results = await fetchWithPlayer(data, process.env.VITE_VIBIX_TOKEN || process.env.VIBIX_TOKEN);
         res.json(results);
     } catch (e) { res.status(500).json([]); }
@@ -145,9 +155,13 @@ app.get("/popular", async (req, res) => {
 
 app.get("/search", async (req, res) => {
     try {
-        const { q, genre, kind } = req.query;
+        const { q, genre, kind, page } = req.query;
         const shikiParams = new URLSearchParams({
-            limit: 15, order: "popularity", search: q || "", censored: "true"
+            limit: FETCH_BUFFER,
+            page: page || 1,
+            order: "popularity",
+            search: q || "",
+            censored: "true"
         });
         if (genre) shikiParams.append("genre", genre);
         if (kind) shikiParams.append("kind", kind);
@@ -155,15 +169,34 @@ app.get("/search", async (req, res) => {
         const response = await fetch(`https://shikimori.one/api/animes?${shikiParams.toString()}`);
         let data = await response.json();
         if (!Array.isArray(data)) return res.json([]);
+
         data = data.filter(item => item.rating !== 'rx');
+        data = data.slice(0, GRID_LIMIT);
 
         const results = await fetchWithPlayer(data, process.env.VITE_VIBIX_TOKEN || process.env.VIBIX_TOKEN);
         res.json(results);
     } catch (e) { res.status(500).json([]); }
 });
 
+app.get("/anime/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const cache = getCache();
+        if (cache[id]) return res.json(cache[id]);
+
+        const response = await fetch(`https://shikimori.one/api/animes/${id}`);
+        if (!response.ok) return res.status(404).json({ error: "Anime not found" });
+
+        const data = await response.json();
+        const results = await fetchWithPlayer([data], process.env.VITE_VIBIX_TOKEN || process.env.VIBIX_TOKEN);
+        res.json(results[0]);
+    } catch (e) {
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
 const server = http.createServer(app);
 
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Сервер запущен. Порт: ${PORT}. Режим: Cloudflare HTTP`);
+    console.log(`🚀 Сервер на порту ${PORT}. Сетка: ${GRID_LIMIT} элементов.`);
 });
