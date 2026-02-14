@@ -117,7 +117,7 @@ const Home = ({ onCardClick, lowGraphics, toggleGraphics, searchState }) => {
 
   // Загрузка популярных при первом входе
   useEffect(() => {
-    document.title = "Chilly Anime — Смотри аниме без лагов";
+    document.title = "Chilly Anime — Смотри аниме онлайн";
     if (popularList.length === 0) {
       setLoading(true);
       fetch(`${apiUrl}/popular?page=1`)
@@ -182,7 +182,7 @@ const Home = ({ onCardClick, lowGraphics, toggleGraphics, searchState }) => {
 
   return (
     <>
-      <Helmet><title>Chilly Anime — Смотри аниме без лагов</title></Helmet>
+      <Helmet><title>Chilly Anime — Смотри аниме онлайн</title></Helmet>
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 20px', zIndex: 1, position: 'relative' }}>
         <SearchHeader
           query={query} setQuery={setQuery}
