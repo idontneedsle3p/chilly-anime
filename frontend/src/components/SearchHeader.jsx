@@ -2,9 +2,9 @@ import React from 'react';
 
 const styles = {
     navbar: {
-        padding: '20px 4vw', display: 'flex', alignItems: 'center',
+        padding: '20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         background: 'transparent',
-        position: 'absolute', top: 0, width: '100%', zIndex: 10,
+        width: '100%', zIndex: 10,
         boxSizing: 'border-box'
     },
     logo: { fontSize: '1.5rem', fontWeight: '800', color: '#fff', letterSpacing: '-1px', cursor: 'pointer', textShadow: '0 0 20px rgba(255,255,255,0.2)' },
@@ -12,7 +12,7 @@ const styles = {
         minHeight: '60vh', display: 'flex', flexDirection: 'column',
         justifyContent: 'center', alignItems: 'center', textAlign: 'center',
         background: 'transparent',
-        padding: '0 20px', paddingTop: '60px'
+        padding: '0 20px', paddingTop: '20px'
     },
     title: {
         fontSize: 'clamp(2.5rem, 5vw, 4.5rem)',
@@ -48,10 +48,23 @@ const GENRES = [
     { id: "10", name: "✨ Фэнтези" }, { id: "22", name: "❤️ Романтика" }
 ];
 
-export const SearchHeader = ({ query, setQuery, onSearch, filters, setFilters, onGoHome }) => (
+export const SearchHeader = ({ query, setQuery, onSearch, filters, setFilters, onGoHome, lowGraphics, toggleGraphics }) => (
     <>
         <nav style={styles.navbar}>
             <div style={styles.logo} onClick={onGoHome}>CHILLY<span style={{ color: '#F43F5E' }}>ANIME</span></div>
+            <button
+                onClick={toggleGraphics}
+                title={lowGraphics ? "Включить эффекты" : "Экономный режим"}
+                style={{
+                    background: lowGraphics ? '#F43F5E' : 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: '#fff', padding: '8px 12px', borderRadius: '10px',
+                    cursor: 'pointer', transition: 'all 0.2s',
+                    display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', fontWeight: '800'
+                }}
+            >
+                ⚡ {lowGraphics ? 'BOOST' : 'ECO'}
+            </button>
         </nav>
         <div style={styles.hero}>
             <h1 style={styles.title}>
@@ -66,11 +79,7 @@ export const SearchHeader = ({ query, setQuery, onSearch, filters, setFilters, o
                     style={styles.input} placeholder="Поиск тайтлов..." value={query}
                     onChange={(e) => setQuery(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && onSearch()}
                 />
-                <button
-                    style={styles.button} onClick={onSearch}
-                    onMouseEnter={e => e.target.style.opacity = '0.9'}
-                    onMouseLeave={e => e.target.style.opacity = '1'}
-                >GO</button>
+                <button style={styles.button} onClick={onSearch}>GO</button>
             </div>
             <div style={styles.genres}>
                 {GENRES.map(g => {
@@ -83,7 +92,6 @@ export const SearchHeader = ({ query, setQuery, onSearch, filters, setFilters, o
                                 background: isActive ? '#F43F5E' : 'rgba(255,255,255,0.03)',
                                 color: isActive ? '#fff' : '#cbd5e1',
                                 borderColor: isActive ? '#F43F5E' : 'rgba(255,255,255,0.1)',
-                                boxShadow: isActive ? '0 0 15px rgba(244, 63, 94, 0.4)' : 'none'
                             }}
                         >
                             {g.name}
