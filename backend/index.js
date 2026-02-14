@@ -55,11 +55,31 @@ function formatVibixItem(shikiItem, vibixData = {}, kodikUrl = null) {
 app.get("/proxy-image", async (req, res) => {
     try {
         const imageUrl = req.query.url;
-        const response = await fetch(imageUrl, { headers: { "User-Agent": "Mozilla/5.0", "Referer": "https://shikimori.one/" } });
+        if (!imageUrl) return res.status(404).send('No URL provided');
+
+        // Делаем запрос к Шикимори, притворяясь обычным браузером
+        const response = await fetch(imageUrl, {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": "https://shikimori.one/",
+                "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+            }
+        });
+
+        // Если Шикимори ответил ошибкой (например, 403 или 404)
+        if (!response.ok) {
+            console.error(`Ошибка загрузки картинки: ${response.status} ${response.statusText} для ${imageUrl}`);
+            return res.redirect("https://via.placeholder.com/225x320?text=No+Image");
+        }
+
+        // Прокидываем заголовки (тип картинки и кэширование)
         res.setHeader("Content-Type", response.headers.get("content-type"));
+        res.setHeader("Cache-Control", "public, max-age=86400"); // Кэшируем на сутки, чтобы не долбить Шикимори
+
         response.body.pipe(res);
     } catch (e) {
-        res.redirect("https://via.placeholder.com/225x320?text=No+Image");
+        console.error("Proxy error:", e.message);
+        res.redirect("https://via.placeholder.com/225x320?text=Error");
     }
 });
 
