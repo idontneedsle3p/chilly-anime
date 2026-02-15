@@ -1,6 +1,5 @@
 import React from 'react';
 
-// SearchHeader.jsx - замени стили в начале файла
 const styles = {
     navbar: {
         padding: '20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -10,14 +9,14 @@ const styles = {
     },
     logo: { fontSize: '1.5rem', fontWeight: '800', color: '#fff', letterSpacing: '-1px', cursor: 'pointer', textShadow: '0 0 20px rgba(255,255,255,0.2)' },
     hero: {
-        minHeight: '40vh', // Уменьшил высоту, чтобы не было лишнего пустого места
+        minHeight: '40vh',
         display: 'flex', flexDirection: 'column',
         justifyContent: 'center', alignItems: 'center', textAlign: 'center',
         background: 'transparent',
-        padding: '0 20px', paddingTop: '40px' // Уменьшил отступ сверху
+        padding: '0 20px', paddingTop: '40px'
     },
     title: {
-        fontSize: 'clamp(2rem, 5vw, 3.5rem)', // Сделал чуть компактнее
+        fontSize: 'clamp(2rem, 5vw, 3.5rem)',
         fontWeight: '800', marginBottom: '10px', color: '#fff',
         letterSpacing: '-1px', lineHeight: '1.2'
     },
@@ -25,7 +24,7 @@ const styles = {
 
     searchContainer: {
         width: '100%', maxWidth: '600px', display: 'flex',
-        background: 'rgba(255, 255, 255, 0.03)', // Сделал фон как в кнопках плеера
+        background: 'rgba(255, 255, 255, 0.03)',
         backdropFilter: 'blur(10px)',
         borderRadius: '16px', padding: '6px',
         border: '1px solid rgba(255,255,255,0.1)',
@@ -39,7 +38,7 @@ const styles = {
     },
     genres: { display: 'flex', gap: '10px', marginTop: '25px', flexWrap: 'wrap', justifyContent: 'center' },
     genreTab: {
-        padding: '8px 18px', borderRadius: '12px', fontSize: '0.85rem', fontWeight: '700', // Квадратнее, как в плеере
+        padding: '8px 18px', borderRadius: '12px', fontSize: '0.85rem', fontWeight: '700',
         border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s ease',
         background: 'rgba(255,255,255,0.05)', color: '#fff'
     }

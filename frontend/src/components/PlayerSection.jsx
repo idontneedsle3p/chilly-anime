@@ -72,7 +72,6 @@ export const PlayerSection = ({ cinemaMode, setCinemaMode, lowGraphics, toggleGr
         }
     }, [item]);
 
-    // Инициализация SDK
     useEffect(() => {
         if (activePlayer === 'vibix' && window.RendexSDK) {
             const timer = setTimeout(() => {
@@ -100,7 +99,6 @@ export const PlayerSection = ({ cinemaMode, setCinemaMode, lowGraphics, toggleGr
         <>
             <Helmet><title>{item.title} | Chilly Anime</title></Helmet>
 
-            {/* Кнопка выхода из кинотеатра */}
             {cinemaMode && (
                 <button style={styles.cinemaBackBtn} onClick={() => setCinemaMode(false)}>Выйти из режима кино ✕</button>
             )}

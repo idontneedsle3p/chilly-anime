@@ -98,7 +98,6 @@ const Home = ({ onCardClick, lowGraphics, toggleGraphics, searchState }) => {
     try { return JSON.parse(localStorage.getItem("chilly_favs") || "[]"); } catch { return []; }
   }, []);
 
-  // ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ (Добавлен параметр currentSort)
   const fetchData = useCallback(async (pageNum = 1, isNewSearch = false, currentSort = sortType) => {
     if (isNewSearch) {
       setLoading(true);
@@ -107,7 +106,6 @@ const Home = ({ onCardClick, lowGraphics, toggleGraphics, searchState }) => {
       setLoadingMore(true);
     }
 
-    // ТУТ БЫЛА ОШИБКА: теперь мы передаем sort=${currentSort}
     const endpoint = hasSearched || (isNewSearch && query.trim())
       ? `${apiUrl}/search?q=${encodeURIComponent(query)}&genre=${filters.genre}&page=${pageNum}`
       : `${apiUrl}/popular?sort=${currentSort}&page=${pageNum}`;
@@ -131,7 +129,6 @@ const Home = ({ onCardClick, lowGraphics, toggleGraphics, searchState }) => {
     }
   }, [query, filters, hasSearched, sortType, setAnimeList, setPopularList, setHasSearched]);
 
-  // Первая загрузка
   useEffect(() => {
     if (popularList.length === 0 && !hasSearched) {
       fetchData(1, true);
@@ -141,7 +138,7 @@ const Home = ({ onCardClick, lowGraphics, toggleGraphics, searchState }) => {
   const handleSortChange = (type) => {
     setSortType(type);
     setPage(1);
-    fetchData(1, true, type); // Явно передаем новый тип сортировки
+    fetchData(1, true, type);
   };
 
   const handleLoadMore = () => {
@@ -208,7 +205,6 @@ const Home = ({ onCardClick, lowGraphics, toggleGraphics, searchState }) => {
                 </div>
               )}
 
-              {/* ИСПРАВЛЕННАЯ СЕТКА: minmax 180px (ПК вид) + gap 24px */}
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
@@ -233,7 +229,6 @@ const Home = ({ onCardClick, lowGraphics, toggleGraphics, searchState }) => {
   );
 };
 
-// ОБЕРТКА ПРИЛОЖЕНИЯ С ФОНОМ
 function AppContent() {
   const navigate = useNavigate();
   const [cinemaMode, setCinemaMode] = useState(false);
@@ -261,7 +256,6 @@ function AppContent() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
       <style>{globalStyles(lowGraphics)}</style>
 
-      {/* ВОТ ЗДЕСЬ ЗВЕЗДЫ */}
       <div className="space-bg">
         <div className="stars-lg"></div>
         <div className="stars-sm"></div>

@@ -8,14 +8,11 @@ import 'dotenv/config';
 const app = express();
 const PORT = process.env.PORT || 4000;
 const DB_PATH = "./db.json";
-const BACKEND_URL = 'https://api.gochilly.fun'; // Твой домен
-
-// Токен
+const BACKEND_URL = 'https://api.gochilly.fun';
 const VIBIX_TOKEN = process.env.VIBIX_TOKEN || process.env.VITE_VIBIX_TOKEN;
 
 app.use(cors({ origin: '*', credentials: true }));
 
-// === 1. ЗАГРУЗКА БАЗЫ ===
 let dbCache = [];
 let dbMap = {};
 
@@ -47,11 +44,9 @@ const saveToDb = (newItem) => {
 
 loadDb();
 
-// === УМНЫЙ ПОИСК VIBIX (С ПРОВЕРКОЙ ГОДА) ===
 async function searchVibixLive(title, shikiKind, targetYear) {
     if (!title || !VIBIX_TOKEN) return null;
     try {
-        // Берем 50 результатов, чтобы найти нужный год
         const url = `https://vibix.org/api/v1/publisher/videos/search?name=${encodeURIComponent(title)}&page=1&limit=50`;
         const res = await fetch(url, {
             method: 'POST',
@@ -66,12 +61,9 @@ async function searchVibixLive(title, shikiKind, targetYear) {
             const needSerial = (shikiKind === 'tv' || shikiKind === 'ona');
             const requiredType = needSerial ? 'serial' : 'movie';
 
-            // Ищем совпадение
             const bestMatch = json.data.find(item => {
-                // 1. Тип должен совпадать
                 if (item.type !== requiredType) return false;
 
-                // 2. Год должен совпадать (допуск +/- 1 год)
                 if (targetYear && item.year) {
                     const diff = Math.abs(parseInt(item.year) - parseInt(targetYear));
                     if (diff > 1) return false;
@@ -79,7 +71,6 @@ async function searchVibixLive(title, shikiKind, targetYear) {
                 return true;
             });
 
-            // Если не нашли подходящего по году — возвращаем null (пусть будет Kodik)
             if (!bestMatch) return null;
 
             const typeMatch = bestMatch.embed_code.match(/data-type="([^"]+)"/);
@@ -97,8 +88,6 @@ async function searchVibixLive(title, shikiKind, targetYear) {
     } catch (e) { }
     return null;
 }
-
-// === РОУТЫ ===
 
 app.get("/proxy-image", async (req, res) => {
     try {
@@ -157,20 +146,17 @@ app.get("/popular", async (req, res) => {
     }
 });
 
-// ГИБРИДНЫЙ ПОИСК
 app.get("/search", async (req, res) => {
     const { q } = req.query;
     if (!q) return res.json([]);
 
     const lowerQ = q.toLowerCase();
 
-    // 1. Локально
     const localResults = dbCache.filter(item =>
         (item.title && item.title.toLowerCase().includes(lowerQ)) ||
         (item.originalTitle && item.originalTitle.toLowerCase().includes(lowerQ))
     );
 
-    // 2. Shikimori (с цензурой)
     try {
         const remoteRes = await fetch(`https://shikimori.one/api/animes?search=${encodeURIComponent(q)}&limit=20&censored=true`, {
             headers: { 'User-Agent': 'ChillyAnime/1.0' }
@@ -206,7 +192,6 @@ app.get("/search", async (req, res) => {
     }
 });
 
-// ПОЛУЧЕНИЕ АНИМЕ (С УМНЫМ ПОИСКОМ)
 app.get("/anime/:id", async (req, res) => {
     const { id } = req.params;
 
@@ -219,10 +204,8 @@ app.get("/anime/:id", async (req, res) => {
         if (!resp.ok) return res.status(404).json({ error: "Not found" });
         const data = await resp.json();
 
-        // 1. Определяем год (например 2024)
         const year = data.aired_on ? data.aired_on.split('-')[0] : null;
 
-        // 2. Передаем ГОД и ТИП в поиск
         let vibixResult = await searchVibixLive(data.russian, data.kind, year);
         if (!vibixResult && data.name) {
             vibixResult = await searchVibixLive(data.name, data.kind, year);
@@ -242,7 +225,6 @@ app.get("/anime/:id", async (req, res) => {
             rating: String(data.score || "0.0"),
             description: data.description || "Описание отсутствует",
             status: data.status === 'released' ? "Завершен" : "Онгоинг",
-            // Если Vibix не прошел проверку по году, тут будет null и включится Kodik
             vibixUrl: vibixResult ? vibixResult.iframe_url : null,
             vibixSdkParams: vibixResult ? vibixResult.sdkParams : null,
             kodikUrl: `https://kodik.info/find-player?shikimoriID=${data.id}`
