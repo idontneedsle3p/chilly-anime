@@ -45,11 +45,6 @@ const styles = {
     }
 };
 
-const GENRES = [
-    { id: "1", name: "🔥 Экшен" }, { id: "4", name: "😂 Комедия" },
-    { id: "10", name: "✨ Фэнтези" }, { id: "22", name: "❤️ Романтика" }
-];
-
 export const SearchHeader = ({ query, setQuery, onSearch, filters, setFilters, onGoHome, lowGraphics, toggleGraphics }) => (
     <>
         <nav style={styles.navbar}>
@@ -77,24 +72,6 @@ export const SearchHeader = ({ query, setQuery, onSearch, filters, setFilters, o
                     onChange={(e) => setQuery(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && onSearch()}
                 />
                 <button style={styles.button} onClick={onSearch}>GO</button>
-            </div>
-            <div style={styles.genres}>
-                {GENRES.map(g => {
-                    const isActive = filters.genre === g.id;
-                    return (
-                        <button
-                            key={g.id} onClick={() => setFilters({ genre: isActive ? "" : g.id })}
-                            style={{
-                                ...styles.genreTab,
-                                background: isActive ? '#F43F5E' : 'rgba(255,255,255,0.05)',
-                                color: isActive ? '#fff' : '#cbd5e1',
-                                borderColor: isActive ? '#F43F5E' : 'rgba(255,255,255,0.1)',
-                            }}
-                        >
-                            {g.name}
-                        </button>
-                    );
-                })}
             </div>
         </div>
     </>

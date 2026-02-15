@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Card } from './components/Card';
 import { PlayerSection } from './components/PlayerSection';
@@ -19,11 +19,12 @@ const globalStyles = (isLow) => `
     -webkit-font-smoothing: antialiased;
   }
   
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: #000; }
-  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: #0b0c15; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: #F43F5E; }
 
+  /* ФОН И ЗВЕЗДЫ */
   .space-bg {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: radial-gradient(circle at 50% 120%, #1e1b4b 0%, #000000 70%);
@@ -60,47 +61,33 @@ const globalStyles = (isLow) => `
   }
 
   .horizontal-scroll-container {
-    display: flex;
-    gap: 15px;
-    overflow-x: auto;
-    padding: 10px 0 20px 0;
+    display: flex; gap: 20px; overflow-x: auto; padding: 10px 0 20px 0;
     scrollbar-width: none;
-    -ms-overflow-style: none;
   }
-  .horizontal-scroll-container::-webkit-scrollbar {
-    display: none;
-  }
+  .horizontal-scroll-container::-webkit-scrollbar { display: none; }
 
   .load-more-btn {
-    display: block; margin: 40px auto; padding: 12px 40px;
+    display: block; margin: 50px auto; padding: 14px 50px;
     background: transparent; color: #fff;
     border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 30px; font-weight: 700; cursor: pointer;
+    border-radius: 12px; font-weight: 700; cursor: pointer;
     transition: all 0.3s ease;
   }
   .load-more-btn:hover {
     background: #fff; color: #000; border-color: #fff;
-    box-shadow: 0 0 20px rgba(255,255,255,0.3);
+    transform: translateY(-2px); box-shadow: 0 10px 20px rgba(255,255,255,0.1);
   }
   
-  .fade-in {
-    animation: fadeIn 0.5s ease forwards;
-    opacity: 0;
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  .fade-in { animation: fadeIn 0.5s ease forwards; opacity: 0; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 `;
 
 const Home = ({ onCardClick, lowGraphics, toggleGraphics, searchState }) => {
   const {
-    query, setQuery,
-    filters, setFilters,
-    animeList, setAnimeList,
-    hasSearched, setHasSearched,
-    popularList, setPopularList,
-    page, setPage
+    query, setQuery, filters, setFilters, animeList, setAnimeList,
+    hasSearched, setHasSearched, popularList, setPopularList, page, setPage,
+    sortType, setSortType
   } = searchState;
 
   const [loading, setLoading] = useState(false);
@@ -108,69 +95,54 @@ const Home = ({ onCardClick, lowGraphics, toggleGraphics, searchState }) => {
   const resultsRef = useRef(null);
 
   const favorites = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem("anime_favorites") || "[]"); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem("chilly_favs") || "[]"); } catch { return []; }
   }, []);
 
-  const history = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem("anime_history") || "[]"); } catch { return []; }
-  }, []);
-
-  // Загрузка популярных при первом входе
-  useEffect(() => {
-    document.title = "Chilly Anime — Смотри аниме онлайн";
-    if (popularList.length === 0) {
-      setLoading(true);
-      fetch(`${apiUrl}/popular?page=1`)
-        .then(res => res.json())
-        .then(data => {
-          setPopularList(Array.isArray(data) ? data : []);
-          setLoading(false);
-        }).catch(() => setLoading(false));
-    }
-  }, [popularList.length, setPopularList]);
-
-  // Функция поиска и подгрузки
-  const fetchData = useCallback(async (pageNum = 1, isNewSearch = false) => {
+  // ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ (Добавлен параметр currentSort)
+  const fetchData = useCallback(async (pageNum = 1, isNewSearch = false, currentSort = sortType) => {
     if (isNewSearch) {
       setLoading(true);
-      setAnimeList([]);
+      if (!hasSearched && query.trim() === "") setPopularList([]);
     } else {
       setLoadingMore(true);
     }
 
+    // ТУТ БЫЛА ОШИБКА: теперь мы передаем sort=${currentSort}
     const endpoint = hasSearched || (isNewSearch && query.trim())
       ? `${apiUrl}/search?q=${encodeURIComponent(query)}&genre=${filters.genre}&page=${pageNum}`
-      : `${apiUrl}/popular?page=${pageNum}`;
+      : `${apiUrl}/popular?sort=${currentSort}&page=${pageNum}`;
 
     try {
       const res = await fetch(endpoint);
       const data = await res.json();
       const newData = Array.isArray(data) ? data : [];
 
-      if (hasSearched || isNewSearch) {
-        setAnimeList(prev => isNewSearch ? newData : [...prev, ...newData]);
-        if (isNewSearch) {
-          setHasSearched(true);
-          setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-        }
+      if (hasSearched || (isNewSearch && query.trim())) {
+        setAnimeList(prev => pageNum === 1 ? newData : [...prev, ...newData]);
+        if (isNewSearch) setHasSearched(true);
       } else {
         setPopularList(prev => pageNum === 1 ? newData : [...prev, ...newData]);
       }
     } catch (e) {
-      console.error(e);
+      console.error("Fetch error:", e);
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [query, filters, hasSearched, setAnimeList, setPopularList, setHasSearched]);
+  }, [query, filters, hasSearched, sortType, setAnimeList, setPopularList, setHasSearched]);
 
-  // Поиск при нажатии на жанр
+  // Первая загрузка
   useEffect(() => {
-    if (filters.genre) {
-      setPage(1);
+    if (popularList.length === 0 && !hasSearched) {
       fetchData(1, true);
     }
-  }, [filters.genre, fetchData, setPage]);
+  }, [sortType, hasSearched, fetchData, popularList.length]);
+
+  const handleSortChange = (type) => {
+    setSortType(type);
+    setPage(1);
+    fetchData(1, true, type); // Явно передаем новый тип сортировки
+  };
 
   const handleLoadMore = () => {
     const nextPage = page + 1;
@@ -183,32 +155,29 @@ const Home = ({ onCardClick, lowGraphics, toggleGraphics, searchState }) => {
   return (
     <>
       <Helmet><title>Chilly Anime — Смотри аниме онлайн</title></Helmet>
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 20px', zIndex: 1, position: 'relative' }}>
+      <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '0 25px', zIndex: 1, position: 'relative' }}>
         <SearchHeader
           query={query} setQuery={setQuery}
           onSearch={() => { setPage(1); fetchData(1, true); }}
           filters={filters} setFilters={setFilters}
-          onGoHome={() => { setHasSearched(false); setQuery(""); setFilters({ genre: "" }); setPage(1); }}
+          onGoHome={() => { setHasSearched(false); setQuery(""); setFilters({ genre: "" }); setPage(1); setSortType('popularity'); }}
           lowGraphics={lowGraphics} toggleGraphics={toggleGraphics}
         />
 
-        <section ref={resultsRef} style={{ marginTop: '20px', position: 'relative', zIndex: 2 }}>
-          {/* Индикатор загрузки теперь появляется ПЕРЕД контентом, если это новый поиск */}
-          {loading && (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#64748b', fontSize: '1.1rem', fontWeight: '600' }}>
-              <div className="spinner" style={{ border: '3px solid rgba(244, 63, 94, 0.2)', borderTop: '3px solid #F43F5E', borderRadius: '50%', width: '30px', height: '30px', animation: 'spin 1s linear infinite', margin: '0 auto 15px' }}></div>
-              Ищем тайтлы...
-            </div>
-          )}
+        <section ref={resultsRef} style={{ marginTop: '30px', position: 'relative', zIndex: 2, paddingBottom: '60px' }}>
 
-          {!loading && (
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+              <div style={{ border: '4px solid rgba(255, 255, 255, 0.1)', borderTop: `4px solid ${sortType === 'trending' ? '#3B82F6' : '#F43F5E'}`, borderRadius: '50%', width: '50px', height: '50px', animation: 'spin 0.8s linear infinite', margin: '0 auto' }}></div>
+            </div>
+          ) : (
             <>
               {favorites.length > 0 && !hasSearched && (
-                <div style={{ marginBottom: '50px' }} className="fade-in">
-                  <h2 style={{ fontSize: 'clamp(1.2rem, 4vw, 1.4rem)', marginBottom: '15px', fontWeight: '800' }}>❤️ Избранное</h2>
+                <div style={{ marginBottom: '60px' }} className="fade-in">
+                  <h2 style={{ fontSize: '1.5rem', marginBottom: '20px', fontWeight: '700', color: '#e2e8f0' }}>❤️ Избранное</h2>
                   <div className="horizontal-scroll-container">
                     {favorites.map((item, idx) => (
-                      <div key={`fav-${item.id}-${idx}`} style={{ minWidth: '150px', maxWidth: '150px', flexShrink: 0 }}>
+                      <div key={`fav-${item.id}-${idx}`} style={{ minWidth: '180px', maxWidth: '180px', flexShrink: 0 }}>
                         <Card item={item} onClick={onCardClick} lowGraphics={lowGraphics} />
                       </div>
                     ))}
@@ -216,11 +185,36 @@ const Home = ({ onCardClick, lowGraphics, toggleGraphics, searchState }) => {
                 </div>
               )}
 
-              <h2 style={{ fontSize: 'clamp(1.4rem, 5vw, 1.8rem)', marginBottom: '25px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                {hasSearched ? `Результаты поиска` : <><span style={{ width: '10px', height: '10px', background: '#F43F5E', borderRadius: '50%', boxShadow: '0 0 15px #F43F5E' }}></span> В тренде</>}
-              </h2>
+              {!hasSearched && (
+                <div style={{ display: 'flex', gap: '15px', marginBottom: '40px' }}>
+                  <button
+                    onClick={() => handleSortChange('popularity')}
+                    style={{
+                      padding: '12px 28px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '1rem',
+                      background: sortType === 'popularity' ? '#F43F5E' : 'rgba(255,255,255,0.05)',
+                      color: '#fff', transition: '0.3s',
+                      boxShadow: sortType === 'popularity' ? '0 8px 20px -5px rgba(244, 63, 94, 0.4)' : 'none'
+                    }}
+                  >🏆 Самое популярное за все время</button>
+                  <button
+                    onClick={() => handleSortChange('trending')}
+                    style={{
+                      padding: '12px 28px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '1rem',
+                      background: sortType === 'trending' ? '#3B82F6' : 'rgba(255,255,255,0.05)',
+                      color: '#fff', transition: '0.3s',
+                      boxShadow: sortType === 'trending' ? '0 8px 20px -5px rgba(59, 130, 246, 0.4)' : 'none'
+                    }}
+                  >🔥 Сейчас в тренде</button>
+                </div>
+              )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '15px' }} className="fade-in">
+              {/* ИСПРАВЛЕННАЯ СЕТКА: minmax 180px (ПК вид) + gap 24px */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                gap: '24px',
+                width: '100%'
+              }} className="fade-in">
                 {displayedList.map((item, idx) => (
                   <Card key={`${item.id}-${idx}`} item={item} onClick={onCardClick} lowGraphics={lowGraphics} />
                 ))}
@@ -239,28 +233,19 @@ const Home = ({ onCardClick, lowGraphics, toggleGraphics, searchState }) => {
   );
 };
 
-export default function App() {
-  return (
-    <HelmetProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </HelmetProvider>
-  );
-}
-
+// ОБЕРТКА ПРИЛОЖЕНИЯ С ФОНОМ
 function AppContent() {
   const navigate = useNavigate();
   const [cinemaMode, setCinemaMode] = useState(false);
   const [lowGraphics, setLowGraphics] = useState(() => localStorage.getItem("low_graphics") === "true");
 
-  // СОСТОЯНИЕ ВЫНЕСЕНО СЮДА ДЛЯ СОХРАНЕНИЯ ПОИСКА ПРИ НАЖАТИИ "НАЗАД"
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState({ genre: "" });
   const [animeList, setAnimeList] = useState([]);
   const [popularList, setPopularList] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [page, setPage] = useState(1);
+  const [sortType, setSortType] = useState('popularity');
 
   const toggleGraphics = () => {
     const newVal = !lowGraphics;
@@ -269,36 +254,31 @@ function AppContent() {
   };
 
   const resetSearch = () => {
-    setHasSearched(false);
-    setQuery("");
-    setFilters({ genre: "" });
-    setPage(1);
-  };
-
-  const handleCardClick = (item) => {
-    const id = item.shikimoriId || item.id;
-    navigate(`/watch/${id}`, { state: { item } });
+    setHasSearched(false); setQuery(""); setFilters({ genre: "" }); setPage(1);
   };
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
       <style>{globalStyles(lowGraphics)}</style>
-      <div className="space-bg"><div className="stars-lg"></div><div className="stars-sm"></div></div>
+
+      {/* ВОТ ЗДЕСЬ ЗВЕЗДЫ */}
+      <div className="space-bg">
+        <div className="stars-lg"></div>
+        <div className="stars-sm"></div>
+      </div>
 
       <div style={{ flex: 1, zIndex: 1, position: 'relative' }}>
         <Routes>
           <Route path="/" element={
             <Home
-              onCardClick={handleCardClick}
+              onCardClick={(item) => navigate(`/watch/${item.shikimoriId || item.id}`, { state: { item } })}
               lowGraphics={lowGraphics}
               toggleGraphics={toggleGraphics}
               searchState={{
-                query, setQuery,
-                filters, setFilters,
-                animeList, setAnimeList,
-                popularList, setPopularList,
-                hasSearched, setHasSearched,
-                page, setPage
+                query, setQuery, filters, setFilters,
+                animeList, setAnimeList, popularList, setPopularList,
+                hasSearched, setHasSearched, page, setPage,
+                sortType, setSortType
               }}
             />
           } />
@@ -325,5 +305,15 @@ function AppContent() {
         <div><a href="https://t.me/chilly_anime" target="_blank" rel="noopener noreferrer" style={{ color: '#3B82F6', textDecoration: 'none', fontSize: '0.85rem', fontWeight: '700' }}>Telegram</a></div>
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <HelmetProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </HelmetProvider>
   );
 }
