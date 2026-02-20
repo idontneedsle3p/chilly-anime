@@ -1,43 +1,135 @@
-import React, { memo } from 'react';
+import React, { useState } from 'react';
 
-export const Card = memo(({ item, onClick, lowGraphics }) => {
+// Иконка звезды для рейтинга
+const StarIcon = () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ color: '#FBBF24' }}>
+        <path d="M12 2l3.09 6.26L22 9.27l-5 7.3L18.18 22 12 18.27 5.82 22l1.18-5.43-5-7.3 6.91-1.01L12 2z" />
+    </svg>
+);
+
+export const Card = ({ item, onClick, lowGraphics }) => {
+    const [isHovered, setIsHovered] = useState(false);
+
     const styles = {
-        card: {
-            position: 'relative', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer',
-            aspectRatio: '2/3', background: 'rgba(30, 30, 40, 0.5)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        // Главный контейнер карточки (теперь это колонка: картинка сверху, текст снизу)
+        wrapper: {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px', // Отступ между постером и текстом
+            cursor: 'pointer',
         },
-        poster: { width: '100%', height: '100%', objectFit: 'cover' },
+        // Контейнер только для картинки
+        imageBox: {
+            position: 'relative',
+            width: '100%',
+            aspectRatio: '2 / 3',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            backgroundColor: '#1e1e28', // Фон на время загрузки
+            boxShadow: (isHovered && !lowGraphics) ? '0 10px 20px rgba(0,0,0,0.4)' : '0 4px 10px rgba(0,0,0,0.2)',
+            transition: 'box-shadow 0.3s ease',
+        },
+        poster: {
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            transition: 'transform 0.3s ease',
+            transform: (isHovered && !lowGraphics) ? 'scale(1.05)' : 'scale(1)',
+        },
         ratingBadge: {
-            position: 'absolute', top: '8px', right: '8px',
-            background: 'rgba(0,0,0,0.8)', color: '#fbbf24',
-            padding: '3px 7px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800'
+            position: 'absolute',
+            top: '8px',
+            left: '8px',
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(4px)',
+            color: '#fff',
+            padding: '4px 8px',
+            borderRadius: '8px',
+            fontSize: '0.8rem',
+            fontWeight: '700',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            zIndex: 2,
         },
-        overlay: {
-            position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%',
-            background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%)',
-            display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '12px'
+        // Контейнер для текста под картинкой
+        infoBox: {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+            padding: '0 4px', // Небольшой отступ по бокам, чтобы текст не прилипал к краям
+        },
+        title: {
+            margin: 0,
+            fontSize: '0.95rem',
+            fontWeight: '700',
+            color: '#f8fafc',
+            lineHeight: '1.3',
+            // Обрезаем текст троеточием, если он длиннее 2 строк
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+        },
+        meta: {
+            margin: 0,
+            fontSize: '0.8rem',
+            color: '#94a3b8',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+        },
+        dot: {
+            width: '4px',
+            height: '4px',
+            backgroundColor: '#64748b',
+            borderRadius: '50%',
         }
     };
 
+    // Форматируем год, чтобы отрезать "-01-01", если вдруг придет полная дата
+    const year = item.year ? String(item.year).split('-')[0] : '—';
+    const status = item.status || 'Неизвестно';
+
     return (
         <div
-            style={styles.card} onClick={() => onClick(item)}
-            onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                if (!lowGraphics) e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.6)';
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
-            }}
+            style={styles.wrapper}
+            onClick={() => onClick(item)}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
         >
-            <img src={item.poster} style={styles.poster} alt="" loading="lazy" />
-            <div style={styles.ratingBadge}>{item.rating}</div>
-            <div style={styles.overlay}>
-                <p style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '700', margin: 0, lineHeight: '1.2' }}>{item.title}</p>
+            {/* БЛОК 1: ПОСТЕР */}
+            <div style={styles.imageBox}>
+                <img
+                    src={item.poster}
+                    alt={item.title}
+                    loading="lazy"
+                    style={styles.poster}
+                />
+                {/* Рейтинг поверх постера */}
+                {item.rating && item.rating !== '0.0' && (
+                    <div style={styles.ratingBadge}>
+                        <StarIcon />
+                        {item.rating}
+                    </div>
+                )}
+            </div>
+
+            {/* БЛОК 2: ТЕКСТ ПОД ПОСТЕРОМ */}
+            <div style={styles.infoBox}>
+                <h3 style={styles.title} title={item.title}>
+                    {item.title}
+                </h3>
+                <div style={styles.meta}>
+                    <span>{year}</span>
+                    <span style={styles.dot}></span>
+                    <span style={{ color: status === 'Онгоинг' ? '#3B82F6' : '#94a3b8' }}>
+                        {status}
+                    </span>
+                </div>
             </div>
         </div>
     );
-});
+};
